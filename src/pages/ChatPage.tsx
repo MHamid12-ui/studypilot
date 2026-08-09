@@ -3,13 +3,10 @@ import { useParams, useNavigate } from 'react-router';
 import { Header } from '../components/layout/Sidebar';
 import { Button } from '../components/ui/Button';
 import { getSession, getSessionMessages, addMessage, updateSessionTitle } from '../lib/chat';
-import { getTopicById } from '../lib/data';
+import { getTopicById, getSubjectById } from '../lib/data';
 import { useAuth } from '../context/AuthContext';
-import {
-  mockTutorResponse,
-  mockGenerateQuiz,
-  mockEvaluateAnswer,
-} from '../lib/mock-ai';
+import { queryFlowise } from '../lib/flowise';
+import { mockGenerateQuiz, mockEvaluateAnswer } from '../lib/mock-ai';
 import { saveQuizQuestion, saveQuizResponse } from '../lib/quiz';
 import { Send, Sparkles, Brain, Check, X, Loader2 } from 'lucide-react';
 import type { ChatMessage, ChatSession, MessageContent } from '../types';
@@ -22,6 +19,7 @@ export function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [quizState, setQuizState] = useState<{
     questionId: string;
     selected: number | null;
@@ -77,21 +75,35 @@ export function ChatPage() {
       setSession((prev: ChatSession | null) => prev ? { ...prev, title } : null);
     }
 
-    // Mock AI response
+    // Get context for Flowise
     const topic = getTopicById(session.topicId);
-    const responseText = mockTutorResponse(
-      text,
-      topic?.name || '',
-      user?.educationLevel || 'high_school',
-      messages.map(m => ({
-        role: m.role,
-        content: m.content.type === 'text' ? m.content.text : '[quiz]'
-      }))
-    );
+    const subject = topic ? getSubjectById(topic.subjectId) : null;
 
-    const aiMsg = addMessage(session.id, 'assistant', { type: 'text', text: responseText });
-    setMessages(prev => [...prev, aiMsg]);
-    setLoading(false);
+    try {
+      setError(null);
+      const responseText = await queryFlowise(text, {
+        userId: user?.id || 'anonymous',
+        sessionId: session.id,
+        userName: user?.fullName,
+        educationLevel: user?.educationLevel || 'high_school',
+        subject: subject?.name || topic?.name || '',
+        subtopic: topic?.name || '',
+      });
+
+      const aiMsg = addMessage(session.id, 'assistant', { type: 'text', text: responseText });
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError('AI Tutor is temporarily unavailable. Please try again.');
+      console.error('Flowise error:', errorMsg);
+
+      // Still add a friendly error message to the chat
+      const errorContent = `I'm sorry, I'm having trouble connecting right now. Please try again in a moment. 🙏`;
+      const aiMsg = addMessage(session.id, 'assistant', { type: 'text', text: errorContent });
+      setMessages(prev => [...prev, aiMsg]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -273,6 +285,14 @@ export function ChatPage() {
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
               Ask a question or click the Practice button for a quiz.
             </p>
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-center">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-2 text-sm text-red-600 dark:text-red-400 animate-fade-in flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
           </div>
         )}
         {messages.map((msg, i) => renderMessage(msg, i))}
