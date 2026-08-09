@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import svgr from 'vite-plugin-svgr'
 import https from 'https'
+import type { IncomingMessage, ServerResponse } from 'http'
 
 // Custom plugin to handle ?import&react syntax (alias to ?react)
 const svgImportPlugin = () => ({
@@ -18,8 +19,8 @@ const svgImportPlugin = () => ({
 // Plugin: proxy /api/flowise-proxy to Flowise Prediction API
 const flowiseProxyPlugin = () => ({
   name: 'flowise-proxy',
-  configureServer(server) {
-    server.middlewares.use('/api/flowise-proxy', async (req, res) => {
+  configureServer(server: ViteDevServer) {
+    server.middlewares.use('/api/flowise-proxy', async (req: IncomingMessage, res: ServerResponse) => {
       // Only accept POST
       if (req.method !== 'POST') {
         res.statusCode = 405;
@@ -29,7 +30,7 @@ const flowiseProxyPlugin = () => ({
 
       // Collect request body
       let body = '';
-      req.on('data', (chunk) => { body += chunk; });
+      req.on('data', (chunk: Buffer) => { body += chunk; });
       req.on('end', () => {
         const options = {
           hostname: 'cloud.flowiseai.com',
