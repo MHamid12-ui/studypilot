@@ -24,11 +24,15 @@ app.post('/api/flowise-proxy', (req, res) => {
   };
 
   const proxyReq = https.request(options, (proxyRes) => {
-    let data = '';
-    proxyRes.on('data', (chunk) => { data += chunk; });
+    let raw = '';
+    proxyRes.on('data', (chunk) => { raw += chunk; });
     proxyRes.on('end', () => {
-      res.status(proxyRes.statusCode || 502);
-      res.json(data);
+      try {
+        const parsed = JSON.parse(raw);
+        res.status(proxyRes.statusCode || 200).json(parsed);
+      } catch {
+        res.status(proxyRes.statusCode || 200).type('application/json').send(raw);
+      }
     });
   });
 
@@ -53,8 +57,8 @@ app.post('/api/flowise-proxy', (req, res) => {
 // Serve static files from the built dist directory
 app.use(express.static('dist'));
 
-// Fallback to index.html for SPA routing (must be after API routes)
-app.get('*', (req, res) => {
+// Fallback to index.html for SPA routing (Express 5 compatible)
+app.use((req, res) => {
   res.sendFile('dist/index.html', { root: '.' });
 });
 
