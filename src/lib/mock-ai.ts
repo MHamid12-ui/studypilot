@@ -63,17 +63,41 @@ export function mockTutorResponse(
   return topicIntro + body + followUp;
 }
 
-export function mockGenerateQuiz(topic: string, _level: EducationLevel): {
+// Map subject display names to quiz bank subject keys
+function subjectToQuizKey(subjectName: string): 'math' | 'cs' | null {
+  const lower = subjectName.toLowerCase();
+  if (lower.includes('math')) return 'math';
+  if (lower.includes('computer')) return 'cs';
+  return null;
+}
+
+export function mockGenerateQuiz(subjectName: string, topic: string, _level: EducationLevel): {
   questionText: string;
   options: string[];
   correctIndex: number;
   explanation: string;
 } {
+  // First, try to find a question that matches the exact topic name
   const qa = QUIZ_BANK.filter(q => q.topic.toLowerCase() === topic.toLowerCase());
-  const pool = qa.length > 0 ? qa : QUIZ_BANK.filter(q =>
-    topic.toLowerCase().includes('math') ? q.subject === 'math' : q.subject === 'cs'
-  );
-  const chosen = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
+  if (qa.length > 0) {
+    const chosen = qa[Math.floor(Math.random() * qa.length)];
+    return {
+      questionText: chosen.questionText,
+      options: chosen.options,
+      correctIndex: chosen.correctIndex,
+      explanation: chosen.explanation,
+    };
+  }
+
+  // Fallback: use the subject name to pick relevant questions
+  const subjectKey = subjectToQuizKey(subjectName);
+  const pool = subjectKey
+    ? QUIZ_BANK.filter(q => q.subject === subjectKey)
+    : QUIZ_BANK; // Unknown subject → show questions from the full bank
+
+  const chosen = pool.length > 0
+    ? pool[Math.floor(Math.random() * pool.length)]
+    : QUIZ_BANK[Math.floor(Math.random() * QUIZ_BANK.length)];
 
   return {
     questionText: chosen.questionText,

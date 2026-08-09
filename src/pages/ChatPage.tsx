@@ -118,7 +118,8 @@ export function ChatPage() {
     setLoading(true);
 
     const topic = getTopicById(session.topicId);
-    const quizData = mockGenerateQuiz(topic?.name || '', user?.educationLevel || 'high_school');
+    const subject = topic ? getSubjectById(topic.subjectId) : null;
+    const quizData = mockGenerateQuiz(subject?.name || '', topic?.name || '', user?.educationLevel || 'high_school');
 
     // Save the quiz question
     const question = saveQuizQuestion(
