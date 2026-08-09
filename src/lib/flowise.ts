@@ -22,8 +22,9 @@ export async function queryFlowise(
   question: string,
   context: FlowiseContext
 ): Promise<string> {
+  const TIMEOUT_MS = 90000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
     const response = await fetch(FLOWISE_API_PROXY, {
@@ -64,7 +65,7 @@ export async function queryFlowise(
     return data.text;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error('Flowise request timed out after 15 seconds');
+      throw new Error(`Flowise request timed out after ${TIMEOUT_MS / 1000} seconds`);
     }
     throw err;
   } finally {

@@ -20,7 +20,7 @@ app.post('/api/flowise-proxy', (req, res) => {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body),
     },
-    timeout: 20000,
+    timeout: 100000,
   };
 
   const proxyReq = https.request(options, (proxyRes) => {
