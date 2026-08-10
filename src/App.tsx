@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicOnlyRoute from "./components/PublicOnlyRoute";
+import { AuthProvider } from "./context/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -16,8 +17,9 @@ import Tutor from "./pages/Tutor";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* Public auth pages — redirected to /dashboard when already signed in */}
       <Route
@@ -56,6 +58,7 @@ export default function App() {
 
       {/* 404 catch-all */}
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </AuthProvider>
   );
 }

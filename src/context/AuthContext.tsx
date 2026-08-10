@@ -1,75 +1,113 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import type { AuthState, Profile } from '../types';
-import { getAuthState, login as authLogin, signup as authSignup, updateProfile as authUpdateProfile } from '../lib/auth';
+/**
+ * StudyPilot — authenticated user context (Task 2).
+ *
+ * Hydrates synchronously from LocalStorage on mount (no login-screen flash)
+ * and exposes the current account + profile globally, so any page can render
+ * the personalized "Welcome back, <name>" without hardcoding a name.
+ */
 
-interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<Profile | null>;
-  signup: (email: string, password: string, fullName: string) => Promise<Profile>;
-  logout: () => void;
-  updateProfile: (updates: Partial<Profile>) => Profile | null;
-  refreshUser: () => void;
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  getCurrentUser,
+  signIn as authSignIn,
+  signOut as authSignOut,
+  signUp as authSignUp,
+  type AuthResult,
+} from "../services/auth";
+import {
+  getUserById,
+  getUserProfile,
+  type UserAccount,
+  type UserProfile,
+} from "../services/dataLayer";
+
+interface SignUpInput {
+  fullName: string;
+  email: string;
+  password: string;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+interface SignInInput {
+  email: string;
+  password: string;
+}
+
+interface AuthContextValue {
+  /** Currently authenticated account (null when logged out). */
+  user: UserAccount | null;
+  /** Current user's profile (name, email, education level). */
+  profile: UserProfile | null;
+  /** Re-reads user + profile from storage (e.g. after onboarding). */
+  refreshProfile: () => void;
+  signUp: (input: SignUpInput) => AuthResult;
+  signIn: (input: SignInInput) => AuthResult;
+  signOut: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ user: null, isAuthenticated: false, isLoading: true });
+  const [user, setUser] = useState<UserAccount | null>(() => getCurrentUser());
+  const [profile, setProfile] = useState<UserProfile | null>(() => {
+    const current = getCurrentUser();
+    return current ? getUserProfile(current.id) : null;
+  });
 
-  const refreshUser = useCallback(() => {
-    setState(getAuthState());
+  const refreshProfile = useCallback(() => {
+    const current = getCurrentUser();
+    setUser(current);
+    setProfile(current ? getUserProfile(current.id) : null);
   }, []);
 
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  const login = useCallback(async (email: string, password: string): Promise<Profile | null> => {
-    const user = authLogin(email, password);
-    if (user) {
-      setState({ user, isAuthenticated: true, isLoading: false });
-    }
-    return user;
+  const applySession = useCallback((userId: string) => {
+    const account = getUserById(userId);
+    setUser(account);
+    setProfile(account ? getUserProfile(account.id) : null);
   }, []);
 
-  const signup = useCallback(async (email: string, password: string, fullName: string): Promise<Profile> => {
-    const user = authSignup(email, password, fullName);
-    setState({ user, isAuthenticated: true, isLoading: false });
-    return user;
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    clearCurrentUser();
-    setState({ user: null, isAuthenticated: false, isLoading: false });
-  }, []);
-
-  const handleUpdateProfile = useCallback((updates: Partial<Profile>): Profile | null => {
-    const updated = authUpdateProfile(updates);
-    if (updated) {
-      setState({ user: updated, isAuthenticated: true, isLoading: false });
-    }
-    return updated;
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{
-      ...state,
-      login,
-      signup,
-      logout: handleLogout,
-      updateProfile: handleUpdateProfile,
-      refreshUser,
-    }}>
-      {children}
-    </AuthContext.Provider>
+  const signUp = useCallback(
+    (input: SignUpInput): AuthResult => {
+      const result = authSignUp(input);
+      if (result.ok) applySession(result.userId);
+      return result;
+    },
+    [applySession]
   );
+
+  const signIn = useCallback(
+    (input: SignInInput): AuthResult => {
+      const result = authSignIn(input);
+      if (result.ok) applySession(result.userId);
+      return result;
+    },
+    [applySession]
+  );
+
+  const signOut = useCallback(() => {
+    authSignOut();
+    setUser(null);
+    setProfile(null);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ user, profile, refreshProfile, signUp, signIn, signOut }),
+    [user, profile, refreshProfile, signUp, signIn, signOut]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth(): AuthContextType {
+export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) {
+    throw new Error("useAuth must be used inside <AuthProvider>.");
+  }
   return ctx;
-}
-
-function clearCurrentUser(): void {
-  localStorage.removeItem('studypilot_current_user');
 }

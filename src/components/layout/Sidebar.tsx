@@ -10,7 +10,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { signOut } from "../../services/session";
+import { useAuth } from "../../context/AuthContext";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleSignOut = () => {
     signOut();

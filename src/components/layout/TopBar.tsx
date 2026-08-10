@@ -1,11 +1,20 @@
-import { Link } from "react-router-dom";
-import { GraduationCap, Settings, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { GraduationCap, LogOut, Settings, User } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * Mobile-only top bar: brand on the left, Settings + Profile on the right.
  * Hidden on desktop, where the persistent sidebar takes over.
  */
 export default function TopBar() {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = () => {
+    signOut();
+    navigate("/auth/login", { replace: true });
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur lg:hidden">
       <Link
@@ -34,6 +43,14 @@ export default function TopBar() {
         >
           <User className="h-5 w-5" aria-hidden="true" />
         </Link>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          aria-label="Log out"
+          className="cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-surface-hover hover:text-destructive"
+        >
+          <LogOut className="h-5 w-5" aria-hidden="true" />
+        </button>
       </div>
     </header>
   );
