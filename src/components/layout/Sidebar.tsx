@@ -1,134 +1,85 @@
-import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { NavLink, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  History,
-  User,
-  LogOut,
+  BookOpen,
   GraduationCap,
-  Menu,
-  X,
-} from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router';
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Sparkles,
+  Target,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import { signOut } from "../../services/session";
 
 const NAV_ITEMS = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/history', icon: History, label: 'History' },
-  { to: '/profile', icon: User, label: 'Profile' },
-];
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/subjects", label: "My Subjects", icon: BookOpen },
+  { to: "/tutor", label: "AI Tutor", icon: Sparkles },
+  { to: "/practice", label: "Practice", icon: Target },
+  { to: "/progress", label: "Progress", icon: TrendingUp },
+  { to: "/profile", label: "Profile", icon: User },
+  { to: "/settings", label: "Settings", icon: Settings },
+] as const;
 
-export function Sidebar() {
-  const location = useLocation();
+export default function Sidebar() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleSignOut = () => {
+    signOut();
+    navigate("/auth/login", { replace: true });
   };
 
   return (
-    <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-card border border-border shadow-sm cursor-pointer"
-        aria-label="Open menu"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static lg:z-auto
-        ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        {/* Close button (mobile) */}
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="lg:hidden absolute top-4 right-4 p-1 rounded-md hover:bg-muted cursor-pointer"
-          aria-label="Close menu"
-        >
-          <X size={18} />
-        </button>
-
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
-          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-            <GraduationCap size={18} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-foreground">StudyPilot</h1>
-            <p className="text-xs text-muted-foreground">AI Study Companion</p>
-          </div>
+    <aside
+      aria-label="Sidebar"
+      className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-surface lg:flex"
+    >
+      {/* Brand */}
+      <div className="flex h-16 items-center gap-3 border-b border-border px-5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-soft">
+          <GraduationCap className="h-5 w-5 text-white" aria-hidden="true" />
+        </span>
+        <div>
+          <p className="text-sm font-bold leading-tight text-foreground">StudyPilot</p>
+          <p className="text-xs text-muted-foreground">Your AI study copilot</p>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(item => {
-            const isActive = location.pathname === item.to;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
-                  ${isActive
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+      {/* Primary navigation */}
+      <nav aria-label="Main navigation" className="flex-1 overflow-y-auto px-3 py-4">
+        <ul className="space-y-1">
+          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+            <li key={to}>
+              <NavLink
+                to={to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ease-out ${
+                    isActive
+                      ? "bg-primary-soft text-primary"
+                      : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+                  }`
+                }
               >
-                <Icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                {label}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-        {/* User info + Logout */}
-        <div className="px-3 py-4 border-t border-border">
-          <div className="px-3 py-2 mb-1">
-            <p className="text-sm font-medium text-foreground truncate">{user?.fullName || 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all duration-150 cursor-pointer"
-          >
-            <LogOut size={18} />
-            Sign out
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
-
-export function Header({ title, onBack }: { title?: string; onBack?: () => void }) {
-  return (
-    <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-4 lg:px-6 py-3 flex items-center gap-3">
-      <button
-        onClick={onBack}
-        className="p-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-        aria-label="Go back"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-      </button>
-      {title && (
-        <h2 className="text-lg font-semibold text-foreground truncate">{title}</h2>
-      )}
-    </header>
+      {/* Log out */}
+      <div className="border-t border-border p-3">
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all duration-150 ease-out hover:bg-surface-hover hover:text-foreground"
+        >
+          <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+          Log out
+        </button>
+      </div>
+    </aside>
   );
 }
