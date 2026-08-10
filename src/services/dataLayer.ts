@@ -245,7 +245,14 @@ export function readCurrentUserId(): string | null {
 }
 
 export function writeCurrentUserId(userId: string): void {
-  writeJson(CURRENT_USER_KEY, userId);
+  if (typeof window === "undefined") return;
+  try {
+    // Store the raw id (no JSON.stringify) so the value round-trips
+    // through readCurrentUserId's raw getItem without literal quotes.
+    window.localStorage.setItem(CURRENT_USER_KEY, userId);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function removeCurrentUserId(): void {
